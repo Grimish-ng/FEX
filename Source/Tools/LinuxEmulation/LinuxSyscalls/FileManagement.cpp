@@ -86,11 +86,19 @@ void FileManager::LoadThunkDatabase(fextl::unordered_map<fextl::string, ThunkDBO
         "/usr/lib/pressure-vessel/overrides",
       };
 
-      // We only need to generate 32-bit or 64-bit depending on the operating mode.
-      const auto ArchPrefix = Is64BitMode() ? "lib64" : "lib";
+      // Fedora-style rootfs: lib64/ is 64-bit, lib/ is 32-bit.
+      // Arch-style rootfs (has /usr/lib32): lib/ is 64-bit (lib64 -> lib), lib32/ is 32-bit.
+      const bool RootFSHasLib32 = RootFSPathExists("/usr/lib32/");
 
       for (auto Prefix : LibPrefixes) {
-        PathPrefixes.emplace_back(fextl::fmt::format("{}/{}", Prefix, ArchPrefix));
+        if (Is64BitMode()) {
+          PathPrefixes.emplace_back(fextl::fmt::format("{}/lib64", Prefix));
+          if (RootFSHasLib32) {
+            PathPrefixes.emplace_back(fextl::fmt::format("{}/lib", Prefix));
+          }
+        } else {
+          PathPrefixes.emplace_back(fextl::fmt::format("{}/{}", Prefix, RootFSHasLib32 ? "lib32" : "lib"));
+        }
       }
     }
 
